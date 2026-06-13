@@ -1,0 +1,435 @@
+import streamlit as st
+import requests
+
+API_URL = "http://localhost:8000"
+
+st.set_page_config(
+    page_title="BJNEXUS AI — Enterprise RAG",
+    page_icon="🧠",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+st.markdown("""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+html, body, [class*="css"] {
+    font-family: 'Inter', sans-serif;
+}
+
+.stApp {
+    background: #0a0e1a;
+}
+
+section[data-testid="stSidebar"] {
+    background: #0f1529;
+    border-right: 1px solid #1e2a4a;
+}
+
+section[data-testid="stSidebar"] * {
+    color: #e2e8f0 !important;
+}
+
+.header-container {
+    background: linear-gradient(135deg, #0f1529 0%, #1a2550 100%);
+    border: 1px solid #2a3a6a;
+    border-radius: 16px;
+    padding: 2rem 2.5rem;
+    margin-bottom: 2rem;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.header-logo {
+    font-size: 3rem;
+    line-height: 1;
+}
+
+.header-title {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #ffffff;
+    margin: 0;
+    letter-spacing: -0.5px;
+}
+
+.header-subtitle {
+    font-size: 0.85rem;
+    color: #7c9cbf;
+    margin: 0.3rem 0 0 0;
+    letter-spacing: 0.5px;
+}
+
+.header-badge {
+    margin-left: auto;
+    background: #1a3a2a;
+    border: 1px solid #2a6a4a;
+    color: #4ade80;
+    padding: 0.4rem 1rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 1px;
+}
+
+.answer-container {
+    background: #111827;
+    border: 1px solid #1f2d4a;
+    border-left: 4px solid #3b82f6;
+    border-radius: 12px;
+    padding: 1.5rem 2rem;
+    margin: 1rem 0;
+}
+
+.answer-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #3b82f6;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 0.8rem;
+}
+
+.answer-text {
+    font-size: 1.05rem;
+    line-height: 1.8;
+    color: #f1f5f9;
+    font-weight: 400;
+}
+
+.sources-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #94a3b8;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin: 1.5rem 0 0.8rem 0;
+}
+
+.source-card {
+    background: #0f1829;
+    border: 1px solid #1e2d4a;
+    border-radius: 10px;
+    padding: 1rem 1.2rem;
+    margin-bottom: 0.6rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.source-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.source-filename {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #93c5fd;
+}
+
+.score-pill {
+    padding: 0.2rem 0.7rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+.score-high {
+    background: #1a3a2a;
+    color: #4ade80;
+    border: 1px solid #2a6a4a;
+}
+
+.score-mid {
+    background: #2a2a1a;
+    color: #fbbf24;
+    border: 1px solid #6a5a1a;
+}
+
+.score-low {
+    background: #2a1a1a;
+    color: #f87171;
+    border: 1px solid #6a2a2a;
+}
+
+.source-preview {
+    font-size: 0.82rem;
+    color: #64748b;
+    line-height: 1.5;
+}
+
+.score-bar-bg {
+    background: #1e2d4a;
+    border-radius: 4px;
+    height: 4px;
+    width: 100%;
+    margin-top: 0.3rem;
+}
+
+.denied-container {
+    background: #1a0a0a;
+    border: 1px solid #4a1a1a;
+    border-left: 4px solid #ef4444;
+    border-radius: 12px;
+    padding: 1.2rem 1.5rem;
+    margin: 1rem 0;
+}
+
+.denied-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #ef4444;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+}
+
+.denied-text {
+    font-size: 0.95rem;
+    color: #fca5a5;
+    line-height: 1.6;
+}
+
+.warning-container {
+    background: #1a1500;
+    border: 1px solid #4a3a00;
+    border-left: 4px solid #f59e0b;
+    border-radius: 12px;
+    padding: 1.2rem 1.5rem;
+    margin: 1rem 0;
+}
+
+.warning-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #f59e0b;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+}
+
+.warning-text {
+    font-size: 0.95rem;
+    color: #fcd34d;
+    line-height: 1.6;
+}
+
+.cost-bar {
+    background: #0f1829;
+    border: 1px solid #1e2d4a;
+    border-radius: 8px;
+    padding: 0.6rem 1rem;
+    margin-top: 1rem;
+    display: flex;
+    gap: 2rem;
+    align-items: center;
+}
+
+.cost-item {
+    font-size: 0.78rem;
+    color: #475569;
+}
+
+.cost-item span {
+    color: #94a3b8;
+    font-weight: 500;
+}
+
+.sidebar-section {
+    background: #0a1020;
+    border: 1px solid #1e2a4a;
+    border-radius: 10px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.sidebar-title {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #4a6a9a !important;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 0.8rem;
+}
+
+stChatMessage {
+    background: transparent;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# Header
+st.markdown("""
+<div class="header-container">
+    <div class="header-logo">🧠</div>
+    <div>
+        <p class="header-title">BJNEXUS AI — Enterprise RAG</p>
+        <p class="header-subtitle">pgvector · Cohere Rerank v3 · Groq LLaMA 3.3 70B · RBAC + ABAC · Hallucination-Free</p>
+    </div>
+    <div class="header-badge">● LIVE</div>
+</div>
+""", unsafe_allow_html=True)
+
+# Sidebar
+with st.sidebar:
+    st.markdown('<p class="sidebar-title">🔐 Access Control</p>', unsafe_allow_html=True)
+    user_id = st.selectbox("User", [
+        "admin_user", "hr_user", "finance_user", "legal_user", "test_user"
+    ], label_visibility="collapsed")
+
+    department = st.selectbox("Department", [
+        "general", "hr", "finance", "legal"
+    ], label_visibility="collapsed")
+
+    top_k = st.slider("Chunks", 1, 10, 5)
+
+    st.markdown("---")
+    st.markdown('<p class="sidebar-title">📋 Role Permissions</p>', unsafe_allow_html=True)
+
+    role_data = {
+        "admin_user": ("admin", "All departments", "#4ade80"),
+        "hr_user": ("hr_staff", "HR · General", "#93c5fd"),
+        "finance_user": ("finance_staff", "Finance · General", "#93c5fd"),
+        "legal_user": ("legal_staff", "Legal · General", "#93c5fd"),
+        "test_user": ("employee", "General only", "#f87171"),
+    }
+    role, access, color = role_data.get(user_id, ("unknown", "unknown", "#94a3b8"))
+    st.markdown(f"""
+<div style="background:#0a1020;border:1px solid #1e2a4a;border-radius:8px;padding:0.8rem;margin-top:0.5rem;">
+    <div style="font-size:0.75rem;color:#64748b;">Current user</div>
+    <div style="font-size:1rem;color:#f1f5f9;font-weight:600;margin:0.2rem 0;">{user_id}</div>
+    <div style="font-size:0.75rem;color:#64748b;">Role: <span style="color:{color};font-weight:600;">{role}</span></div>
+    <div style="font-size:0.75rem;color:#64748b;margin-top:0.2rem;">Access: <span style="color:#94a3b8;">{access}</span></div>
+</div>
+""", unsafe_allow_html=True)
+
+    st.markdown("---")
+    st.markdown('<p class="sidebar-title">📤 Ingest Document</p>', unsafe_allow_html=True)
+    uploaded_file = st.file_uploader("Upload", type=["pdf", "docx", "xlsx", "txt", "csv"], label_visibility="collapsed")
+    ingest_dept = st.selectbox("To department", ["general", "hr", "finance", "legal"])
+    if st.button("⬆ Ingest Document", use_container_width=True) and uploaded_file:
+        with st.spinner("Ingesting..."):
+            response = requests.post(
+                f"{API_URL}/ingest",
+                files={"file": (uploaded_file.name, uploaded_file, "application/octet-stream")},
+                data={"department": ingest_dept}
+            )
+            if response.status_code == 200:
+                result = response.json()
+                st.success(f"✅ {result['chunks_created']} chunks ingested from {uploaded_file.name}")
+            else:
+                st.error(f"❌ {response.text}")
+
+# Chat history
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+for msg in st.session_state.messages:
+    with st.chat_message(msg["role"]):
+        st.markdown(msg["content"], unsafe_allow_html=True)
+
+# Query
+if prompt := st.chat_input("Ask anything about your documents..."):
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    with st.chat_message("user"):
+        st.markdown(prompt)
+
+    with st.chat_message("assistant"):
+        with st.spinner("Searching documents and generating answer..."):
+            try:
+                response = requests.post(
+                    f"{API_URL}/query",
+                    json={
+                        "query": prompt,
+                        "department": department,
+                        "user_id": user_id,
+                        "top_k": top_k
+                    }
+                )
+                data = response.json()
+                answer = data.get("answer", "No answer returned.")
+                sources = data.get("sources", [])
+                cost = data.get("cost", {})
+                model = data.get("model", "unknown")
+                chunks_used = data.get("chunks_used", 0)
+                total_cost = cost.get("total_cost_usd", 0)
+                total_tokens = cost.get("total_tokens", 0)
+
+                if "Access denied" in answer:
+                    html = f"""
+<div class="denied-container">
+    <div class="denied-label">🚫 Access Denied</div>
+    <div class="denied-text">{answer}</div>
+</div>"""
+                    st.markdown(html, unsafe_allow_html=True)
+                    full_response = html
+
+                elif "do not meet the relevance threshold" in answer or "not enough information" in answer.lower():
+                    html = f"""
+<div class="warning-container">
+    <div class="warning-label">⚠ No Relevant Documents Found</div>
+    <div class="warning-text">{answer}</div>
+</div>"""
+                    st.markdown(html, unsafe_allow_html=True)
+                    full_response = html
+
+                else:
+                    sources_html = ""
+                    if sources:
+                        sources_html = '<div class="sources-label">📚 Sources</div>'
+                        for s in sources:
+                            score = s.get("score", 0)
+                            filename = s.get("filename", "unknown")
+                            preview = s.get("preview", "")
+                            score_pct = int(score * 100)
+
+                            if score >= 0.8:
+                                pill_class = "score-high"
+                                bar_color = "#4ade80"
+                            elif score >= 0.5:
+                                pill_class = "score-mid"
+                                bar_color = "#fbbf24"
+                            else:
+                                pill_class = "score-low"
+                                bar_color = "#f87171"
+
+                            sources_html += f"""
+<div class="source-card">
+    <div class="source-header">
+        <span class="source-filename">📄 {filename}</span>
+        <span class="score-pill {pill_class}">{score_pct}% confidence</span>
+    </div>
+    <div class="score-bar-bg">
+        <div style="background:{bar_color};height:4px;border-radius:4px;width:{score_pct}%;"></div>
+    </div>
+    <div class="source-preview">{preview}</div>
+</div>"""
+
+                    cost_html = f"""
+<div class="cost-bar">
+    <div class="cost-item">Model <span>{model}</span></div>
+    <div class="cost-item">Chunks <span>{chunks_used}</span></div>
+    <div class="cost-item">Tokens <span>{total_tokens:,}</span></div>
+    <div class="cost-item">Cost <span>${total_cost:.6f}</span></div>
+</div>"""
+
+                    html = f"""
+<div class="answer-container">
+    <div class="answer-label">Answer</div>
+    <div class="answer-text">{answer}</div>
+</div>
+{sources_html}
+{cost_html}"""
+                    st.markdown(html, unsafe_allow_html=True)
+                    full_response = html
+
+            except Exception as e:
+                st.error(f"Connection error: {e}")
+                full_response = f"Error: {e}"
+
+    st.session_state.messages.append({"role": "assistant", "content": full_response})

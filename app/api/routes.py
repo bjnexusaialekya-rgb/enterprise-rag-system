@@ -1,5 +1,6 @@
 import logging
-from fastapi import APIRouter, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Security, Depends
+from fastapi.security import APIKeyHeader
 from pydantic import BaseModel
 import tempfile
 import os
@@ -10,9 +11,21 @@ from app.retrieval.validator import validate, ValidationError
 from app.generation.generator import generate_answer
 from app.cost_tracker import CostTracker
 from app.auth.rbac import check_access, get_user_role, get_allowed_departments
+from app.auth.api_key_auth import validate_api_key
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+# --- API Key Security ---
+api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
+
+def require_api_key(api_key: str = Security(api_key_header)) -> dict:
+    if not api_key:
+        raise HTTPException(status_code=401, detail="X-API-Key header missing")
+    key_data = validate_api_key(api_key)
+    if not key_data:
+        raise HTTPException(status_code=403, detail="Invalid or inactive API key")
+    return key_data
 
 
 class QueryRequest(BaseModel):
@@ -51,7 +64,8 @@ def health_check():
 async def ingest(
     file: UploadFile = File(...),
     department: str = Form(default="general"),
-    uploaded_by: str = Form(default="anonymous")
+    uploaded_by: str = Form(default="anonymous"),
+    key_data: dict = Depends(require_api_key)
 ):
     try:
         suffix = os.path.splitext(file.filename)[-1] or ".txt"
@@ -75,7 +89,10 @@ async def ingest(
 
 
 @router.post("/query", response_model=QueryResponse)
-def query(request: QueryRequest):
+def query(
+    request: QueryRequest,
+    key_data: dict = Depends(require_api_key)
+):
     try:
         # RBAC check
         allowed, role = check_access(request.user_id, request.department)
