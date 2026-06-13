@@ -1,0 +1,32 @@
+IT POLICY — BJNEXUS AI
+Effective January 2026
+
+PURPOSE
+This policy governs the use of IT systems, software, and data at BJNEXUS AI to ensure security, reliability, and compliance.
+
+ACCEPTABLE USE
+Company IT systems must be used for business purposes only. Personal use is permitted on a limited basis provided it does not impact productivity or security.
+
+PASSWORD POLICY
+All passwords must be at least 12 characters and include uppercase, lowercase, numbers, and special characters. Passwords must be changed every 90 days. Password sharing is strictly prohibited.
+
+DATA CLASSIFICATION
+- Public: Marketing materials, published content
+- Internal: Company documents, policies, reports
+- Confidential: Client data, financial records, source code
+- Restricted: API keys, credentials, personal data
+
+DATA HANDLING
+Confidential and Restricted data must be encrypted at rest and in transit. Client data must never be stored on personal devices. All data transfers must use secure protocols (HTTPS, SFTP).
+
+API KEY MANAGEMENT
+All API keys must be stored in environment variables or a secrets manager. API keys must never be committed to version control. Keys must be rotated every 180 days or immediately upon suspected compromise.
+
+SOFTWARE POLICY
+Only licensed and approved software may be installed on company systems. All software must be kept up to date with security patches. Open source software must be reviewed before use in client projects.
+
+INCIDENT RESPONSE
+Security incidents must be reported to the IT lead within 1 hour of discovery. A root cause analysis must be completed within 5 business days. Client notification within 24 hours if client data is involved.
+
+REMOTE WORK
+VPN must be used when accessing company systems on public networks. Screen locks must activate after 5 minutes of inactivity. Physical security of devices is the responsibility of each employee.

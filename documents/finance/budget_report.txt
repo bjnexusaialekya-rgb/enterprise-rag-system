@@ -1,0 +1,34 @@
+ANNUAL BUDGET REPORT — BJNEXUS AI
+Financial Year 2025-2026
+
+EXECUTIVE SUMMARY
+Total revenue for FY2025-26 is projected at INR 1,20,00,000. Operating expenses are budgeted at INR 72,00,000 resulting in an operating profit of INR 48,00,000.
+
+REVENUE BREAKDOWN
+- AI Automation Projects: INR 45,00,000
+- RAG System Deployments: INR 35,00,000
+- Voice Agent Solutions: INR 25,00,000
+- Consulting & Training: INR 15,00,000
+Total: INR 1,20,00,000
+
+OPERATING EXPENSES
+- Salaries & Benefits: INR 40,00,000
+- Cloud Infrastructure: INR 12,00,000
+- Software Licenses: INR 5,00,000
+- Marketing: INR 8,00,000
+- Office & Admin: INR 4,00,000
+- R&D: INR 3,00,000
+Total: INR 72,00,000
+
+CAPITAL EXPENDITURE
+- GPU Server (A10G): INR 8,00,000
+- Workstations: INR 2,00,000
+Total CapEx: INR 10,00,000
+
+PROFIT & LOSS SUMMARY
+Operating Profit: INR 48,00,000
+Tax (25%): INR 12,00,000
+Net Profit: INR 36,00,000
+
+BUDGET VARIANCE
+Q1 revenue exceeded target by 12%. Q2 cloud costs were 8% over budget due to increased GPU usage. Corrective action taken: reserved instances purchased for Q3-Q4.

@@ -1,0 +1,436 @@
+import os
+import sys
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..')))
+
+import logging
+from typing import Optional
+from sqlalchemy import text
+from app.database.connection import SessionLocal
+from app.ingestion.embedder import embed_text
+
+logger = logging.getLogger(__name__)
+
+
+def retrieve(
+    query: str,
+    department: Optional[str] = None,
+    top_k: int = 5,
+    semantic_weight: float = 0.6,
+    bm25_weight: float = 0.4,
+) -> list[dict]:
+    """
+    Hybrid retrieval: semantic (pgvector cosine) + BM25 (tsvector) fused with RRF.
+    Optional ABAC department filter applied before search.
+    Returns ranked list of chunk dicts with scores.
+    """
+    if not query or not query.strip():
+        raise ValueError("Query must be a non-empty string.")
+
+    logger.info(f"[retriever] Query: '{query}' | Department: {department} | Top-K: {top_k}")
+
+    query_vector = embed_text(query)
+    vector_str = "[" + ",".join(str(x) for x in query_vector) + "]"
+
+    # ABAC department filter — injected safely via bind params
+    dept_clause = "AND d.department = :department" if department else ""
+
+    sql = text(f"""
+    WITH semantic AS (
+        SELECT
+            c.id,
+            c.content,
+            c.document_id,
+            ROW_NUMBER() OVER (ORDER BY c.embedding <=> CAST(:vector AS vector)) AS rank
+        FROM chunks c
+        JOIN documents d ON c.document_id = d.id
+        WHERE 1=1 {dept_clause}
+        ORDER BY c.embedding <=> CAST(:vector AS vector)
+        LIMIT 50
+    ),
+    bm25 AS (
+        SELECT
+            c.id,
+            c.content,
+            c.document_id,
+            ROW_NUMBER() OVER (
+                ORDER BY ts_rank(c.content_tsv, plainto_tsquery('english', :query)) DESC
+            ) AS rank
+        FROM chunks c
+        JOIN documents d ON c.document_id = d.id
+        WHERE c.content_tsv @@ plainto_tsquery('english', :query) {dept_clause}
+        ORDER BY ts_rank(c.content_tsv, plainto_tsquery('english', :query)) DESC
+        LIMIT 50
+    ),
+    rrf AS (
+        SELECT
+            COALESCE(s.id, b.id)                     AS id,
+            COALESCE(s.content, b.content)            AS content,
+            COALESCE(s.document_id, b.document_id)    AS document_id,
+            (
+                COALESCE(:sem_w / (60.0 + s.rank), 0) +
+                COALESCE(:bm25_w / (60.0 + b.rank), 0)
+            )                                          AS rrf_score
+        FROM semantic s
+        FULL OUTER JOIN bm25 b ON s.id = b.id
+    )
+    SELECT
+        r.id,
+        r.content,
+        r.document_id,
+        d.filename,
+        d.department,
+        r.rrf_score
+    FROM rrf r
+    JOIN documents d ON r.document_id = d.id
+    ORDER BY r.rrf_score DESC
+    LIMIT :top_k;
+    """)
+
+    params = {
+        "vector": vector_str,
+        "query": query,
+        "sem_w": semantic_weight,
+        "bm25_w": bm25_weight,
+        "top_k": top_k,
+    }
+    if department:
+        params["department"] = department
+
+    db = SessionLocal()
+    try:
+        rows = db.execute(sql, params).fetchall()
+        results = [
+            {
+                "chunk_id":    str(row[0]),
+                "content":     row[1],
+                "document_id": str(row[2]),
+                "filename":    row[3],
+                "department":  row[4],
+                "score":       float(row[5]),
+            }
+            for row in rows
+        ]
+        logger.info(f"[retriever] Returned {len(results)} chunks.")
+        return results
+
+    except Exception as e:
+        logger.error(f"[retriever] Query failed: {e}")
+        raise
+
+    finally:
+        db.close()
+
+
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
+    print("Testing retriever...")
+    results = retrieve("test document", top_k=3)
+    if results:
+        print(f"Retrieved {len(results)} chunks:")
+        for r in results:
+            print(f"  score={r['score']:.4f} | file={r['filename']} | dept={r['department']}")
+            print(f"    {r['content'][:100]}...")
+    else:
+        print("No results (BM25 may not match — semantic-only fallback needed).")
+    print("Done.")import os
+import logging
+from typing import Optional
+from dotenv import load_dotenv
+
+load_dotenv()
+
+logger = logging.getLogger(__name__)
+
+RELEVANCE_THRESHOLD = float(os.getenv("RELEVANCE_THRESHOLD", "0.75"))
+MINIMUM_CHUNKS = 1
+
+
+class ValidationError(Exception):
+    pass
+
+
+def validate(
+    query: str,
+    chunks: list[dict],
+    threshold: float = RELEVANCE_THRESHOLD,
+    min_chunks: int = MINIMUM_CHUNKS,
+) -> list[dict]:
+    if not chunks:
+        logger.warning(f"[validator] REJECTED — no chunks returned for query: '{query}'")
+        raise ValidationError(
+            "No relevant documents found. "
+            "Cannot generate a response without supporting evidence."
+        )
+
+    top_score = chunks[0]["score"]
+    logger.info(f"[validator] Top chunk score: {top_score:.4f} | Threshold: {threshold}")
+
+    if top_score < threshold:
+        logger.warning(
+            f"[validator] REJECTED — top score {top_score:.4f} below "
+            f"threshold {threshold} for query: '{query}'"
+        )
+        raise ValidationError(
+            f"Retrieved documents do not meet the relevance threshold "
+            f"({top_score:.4f} < {threshold}). "
+            f"Cannot generate a reliable response."
+        )
+
+    passing = [c for c in chunks if c["score"] >= threshold]
+
+    if len(passing) < min_chunks:
+        logger.warning(
+            f"[validator] REJECTED — only {len(passing)} chunks passed threshold "
+            f"(minimum {min_chunks}) for query: '{query}'"
+        )
+        raise ValidationError(
+            f"Insufficient evidence: {len(passing)} chunk(s) met the relevance bar, "
+            f"minimum required is {min_chunks}."
+        )
+
+    logger.info(
+        f"[validator] PASSED — {len(passing)}/{len(chunks)} chunks accepted "
+        f"for query: '{query}'"
+    )
+    return passing
+
+
+def safe_validate(
+    query: str,
+    chunks: list[dict],
+    threshold: float = RELEVANCE_THRESHOLD,
+) -> tuple[Optional[list[dict]], Optional[str]]:
+    try:
+        validated = validate(query, chunks, threshold)
+        return validated, None
+    except ValidationError as e:
+        return None, str(e)
+
+
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
+
+    print("=== Test 1: Empty chunks (should reject) ===")
+    try:
+        validate("what is AI?", [])
+    except ValidationError as e:
+        print(f"REJECTED: {e}\n")
+
+    print("=== Test 2: Low score (should reject) ===")
+    low_chunks = [{"chunk_id": "1", "content": "...", "score": 0.016,
+                   "filename": "doc.txt", "document_id": "x", "department": "general"}]
+    try:
+        validate("what is AI?", low_chunks)
+    except ValidationError as e:
+        print(f"REJECTED: {e}\n")
+
+    print("=== Test 3: High score (should pass) ===")
+    high_chunks = [{"chunk_id": "1", "content": "AI is artificial intelligence.",
+                    "score": 0.85, "filename": "doc.txt",
+                    "document_id": "x", "department": "general"}]
+    result = validate("what is AI?", high_chunks)
+    print(f"PASSED: {len(result)} chunk(s) accepted\n")
+
+    print("=== Test 4: safe_validate (no exception) ===")
+    chunks, err = safe_validate("what is AI?", low_chunks)
+    print(f"chunks={chunks} | error='{err}'")
+import os
+from dotenv import load_dotenv
+from groq import Groq
+
+load_dotenv()
+client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+
+SYSTEM_PROMPT = """You are an enterprise assistant. Answer questions using ONLY the provided context.
+If the context does not contain enough information, say: "I don't have enough information to answer this question."
+Never hallucinate. Never use outside knowledge."""
+
+
+def generate_answer(query: str, validated_chunks: list[dict]) -> dict:
+    if not validated_chunks:
+        return {
+            "answer": "I don't have enough information to answer this question.",
+            "sources": [],
+            "chunks_used": 0
+        }
+
+    context_parts = []
+    sources = []
+    for i, chunk in enumerate(validated_chunks, 1):
+        context_parts.append(f"[{i}] {chunk['content']}")
+        sources.append({
+            "chunk_id": chunk.get("chunk_id"),
+            "document_id": chunk.get("document_id"),
+            "score": chunk.get("final_score")
+        })
+
+    context = "\n\n".join(context_parts)
+
+    messages = [
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "user", "content": f"Context:\n{context}\n\nQuestion: {query}"}
+    ]
+
+    response = client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        messages=messages,
+        temperature=0.1,
+        max_tokens=1024
+    )
+
+    answer = response.choices[0].message.content
+
+    return {
+        "answer": answer,
+        "sources": sources,
+        "chunks_used": len(validated_chunks),
+        "model": response.model,
+        "usage": {
+            "prompt_tokens": response.usage.prompt_tokens,
+            "completion_tokens": response.usage.completion_tokens
+        }
+    }
+
+
+if __name__ == "__main__":
+    print("Testing generator...")
+
+    mock_chunks = [
+        {
+            "content": "The enterprise RAG system uses hybrid retrieval combining semantic search and BM25 with RRF scoring.",
+            "chunk_id": 1,
+            "document_id": 1,
+            "final_score": 0.82
+        },
+        {
+            "content": "ABAC filters ensure users only access documents from their authorized department.",
+            "chunk_id": 2,
+            "document_id": 1,
+            "final_score": 0.79
+        }
+    ]
+
+    result = generate_answer(
+        query="How does the RAG system handle document access control?",
+        validated_chunks=mock_chunks
+    )
+
+    print(f"Answer: {result['answer']}")
+    print(f"Chunks used: {result['chunks_used']}")
+    print(f"Model: {result['model']}")
+    print(f"Tokens: {result['usage']}")
+    print("Generator test PASSED ✅")import logging
+from fastapi import APIRouter, HTTPException, UploadFile, File, Form
+from pydantic import BaseModel
+import tempfile
+import os
+
+from app.ingestion.ingestor import ingest_file
+from app.retrieval.retriever import retrieve
+from app.retrieval.validator import validate, ValidationError
+from app.generation.generator import generate_answer
+from app.cost_tracker import CostTracker
+
+logger = logging.getLogger(__name__)
+router = APIRouter()
+
+
+class QueryRequest(BaseModel):
+    query: str
+    department: str = "general"
+    user_id: str = "anonymous"
+    top_k: int = 5
+
+
+class QueryResponse(BaseModel):
+    answer: str
+    sources: list
+    chunks_used: int
+    model: str
+    cost: dict
+
+
+class IngestResponse(BaseModel):
+    document_id: str
+    filename: str
+    chunks_created: int
+    status: str
+
+
+@router.get("/")
+def root():
+    return {"message": "Enterprise RAG System Running"}
+
+
+@router.get("/health")
+def health_check():
+    return {"status": "healthy"}
+
+
+@router.post("/ingest", response_model=IngestResponse)
+async def ingest(
+    file: UploadFile = File(...),
+    department: str = Form(default="general"),
+    uploaded_by: str = Form(default="anonymous")
+):
+    try:
+        suffix = os.path.splitext(file.filename)[-1] or ".txt"
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+            content = await file.read()
+            tmp.write(content)
+            tmp_path = tmp.name
+
+        result = ingest_file(file_path=tmp_path, department=department)
+        os.unlink(tmp_path)
+
+        return IngestResponse(
+            document_id=result["document_id"],
+            filename=file.filename,
+            chunks_created=result["chunks_created"],
+            status="success"
+        )
+    except Exception as e:
+        logger.error(f"Ingest error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/query", response_model=QueryResponse)
+def query(request: QueryRequest):
+    try:
+        tracker = CostTracker(session_id=f"{request.user_id}_{request.query[:20]}")
+
+        chunks = retrieve(query=request.query, department=request.department, top_k=request.top_k)
+
+        try:
+            validated = validate(query=request.query, chunks=chunks)
+        except ValidationError as e:
+            return QueryResponse(
+                answer=str(e),
+                sources=[],
+                chunks_used=0,
+                model="none",
+                cost={"total_cost_usd": 0.0, "total_tokens": 0}
+            )
+
+        result = generate_answer(query=request.query, validated_chunks=validated)
+
+        if "usage" in result:
+            cost_event = tracker.track(
+                provider="groq",
+                model=result["model"],
+                prompt_tokens=result["usage"]["prompt_tokens"],
+                completion_tokens=result["usage"]["completion_tokens"]
+            )
+        else:
+            cost_event = {"total_cost_usd": 0.0, "total_tokens": 0}
+
+        return QueryResponse(
+            answer=result["answer"],
+            sources=result["sources"],
+            chunks_used=result["chunks_used"],
+            model=result.get("model", "unknown"),
+            cost=cost_event
+        )
+    except Exception as e:
+        logger.error(f"Query error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

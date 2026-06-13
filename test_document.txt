@@ -1,0 +1,18 @@
+Enterprise RAG System Test Document
+
+This document is used to test the ingestion pipeline.
+The system should chunk this text into smaller pieces.
+Each chunk will be converted to a vector using sentence transformers.
+The vectors will be stored in pgvector for semantic search.
+
+Section 2: About RAG Systems
+RAG stands for Retrieval Augmented Generation.
+It combines vector search with large language models.
+The system retrieves relevant chunks and generates cited answers.
+This prevents hallucination by grounding answers in real documents.
+
+Section 3: Technical Details
+The database uses PostgreSQL with the pgvector extension.
+Embeddings are 384-dimensional vectors from all-MiniLM-L6-v2.
+Cosine similarity is used to find the most relevant chunks.
+The retrieval threshold is set at 0.50 for fail-closed behavior.

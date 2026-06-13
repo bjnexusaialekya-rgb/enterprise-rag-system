@@ -1,0 +1,31 @@
+CONTRACT POLICY — BJNEXUS AI
+Effective January 2026
+
+PURPOSE
+This policy governs how BJNEXUS AI enters into, manages, and closes contracts with clients, vendors, and partners.
+
+CONTRACT TYPES
+1. Fixed Price Contracts — Defined scope, fixed deliverables, fixed price. Used for RAG builds, automation projects.
+2. Time & Material Contracts — Hourly or daily rate. Used for consulting and support engagements.
+3. Retainer Contracts — Monthly fixed fee for ongoing support and maintenance.
+
+CONTRACT APPROVAL
+All contracts above USD 1,000 require approval from the Managing Director. Contracts above USD 10,000 require legal review before signing.
+
+PAYMENT TERMS
+Standard payment terms are 50% upfront and 50% on delivery for fixed price contracts. Retainers are invoiced monthly in advance.
+
+MILESTONE PAYMENTS
+For projects exceeding USD 2,000, milestone-based payments are preferred: 30% on signing, 40% at mid-point delivery, 30% on final delivery.
+
+SCOPE CHANGES
+Any change in scope must be documented via a Change Request Form. Additional cost and timeline impact must be agreed in writing before work begins.
+
+TERMINATION
+Either party may terminate a contract with 14 days written notice. Work completed up to termination date will be invoiced at the agreed rate.
+
+INTELLECTUAL PROPERTY
+All custom code and deliverables become the property of the client upon full payment. BJNEXUS AI retains the right to use anonymized project details for portfolio purposes.
+
+DISPUTE RESOLUTION
+Disputes shall first be attempted through mediation. If unresolved within 30 days, disputes shall be referred to arbitration under Indian Arbitration and Conciliation Act 1996.

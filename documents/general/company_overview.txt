@@ -1,0 +1,39 @@
+COMPANY OVERVIEW — BJNEXUS AI
+Hyderabad, India | 2026
+
+WHO WE ARE
+BJNEXUS AI is an AI automation company specializing in Enterprise RAG Systems, Voice Agents, and intelligent workflow automation. Founded by Karuna Alekya K., the company serves clients across India, North America, and Europe.
+
+OUR MISSION
+To make enterprise AI reliable, explainable, and production-ready — systems that know what they don't know and say so, instead of guessing.
+
+CORE SERVICES
+1. Enterprise RAG Systems
+   Custom document intelligence systems with hybrid retrieval, reranking, and hallucination prevention. Built on pgvector, Cohere, and open-source LLMs.
+
+2. Voice Agents
+   AI-powered voice agents for lead qualification, appointment booking, and customer support. Live demo: +1 517 923 2840.
+
+3. AI Workflow Automation
+   End-to-end automation using Make.com, N8N, GoHighLevel, Apollo, and Smartlead for lead generation and CRM workflows.
+
+4. Consulting & Training
+   AI strategy consulting and team training for enterprises adopting AI.
+
+TECHNOLOGY STACK
+- LLMs: Groq (llama-3.3-70b), OpenAI GPT-4o, Ollama (local)
+- Vector DB: PostgreSQL + pgvector
+- Reranking: Cohere Rerank v3
+- Embeddings: sentence-transformers, OpenAI text-embedding-3-large
+- Backend: FastAPI, SQLAlchemy
+- Frontend: Streamlit, React
+- Deployment: Railway, Docker
+
+PORTFOLIO
+- Enterprise RAG System (current build)
+- Apex Engine — AI lead generation automation
+- Voice Agent — live on Vimeo: https://vimeo.com/1198779438
+
+CONTACT
+GitHub: https://github.com/bjnexusaialekya-rgb
+Email: bjnexusai.alekya@gmail.com

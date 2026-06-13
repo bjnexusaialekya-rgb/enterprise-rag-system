@@ -1,0 +1,43 @@
+INVOICE TEMPLATE — BJNEXUS AI
+
+BJNEXUS AI
+Hyderabad, Telangana, India
+Email: bjnexusai.alekya@gmail.com
+GSTIN: [GST NUMBER]
+
+INVOICE NUMBER: INV-2026-001
+INVOICE DATE: [DATE]
+DUE DATE: [DATE + 30 DAYS]
+
+BILL TO:
+[Client Name]
+[Client Address]
+[Client GSTIN]
+
+SERVICES RENDERED:
+1. Enterprise RAG System Development — Phase 1
+   Ingestion Pipeline + Vector Store
+   Amount: USD 800
+
+2. Enterprise RAG System Development — Phase 2
+   Retrieval + Reranker + Validator
+   Amount: USD 1,800
+
+3. Enterprise RAG System Development — Phase 3
+   UI + Deployment + Evaluation
+   Amount: USD 1,400
+
+SUBTOTAL: USD 4,000
+TAX (if applicable): USD 0
+TOTAL DUE: USD 4,000
+
+PAYMENT TERMS: Net 30 days
+PAYMENT METHOD: Bank Transfer / Wise / PayPal
+
+BANK DETAILS:
+[Bank Name]
+[Account Number]
+[IFSC Code]
+[SWIFT Code for international transfers]
+
+Thank you for your business.

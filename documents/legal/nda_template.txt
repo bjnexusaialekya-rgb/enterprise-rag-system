@@ -1,0 +1,30 @@
+NON-DISCLOSURE AGREEMENT (NDA)
+BJNEXUS AI
+
+This Non-Disclosure Agreement is entered into as of [DATE] between BJNEXUS AI, Hyderabad, India (Disclosing Party) and [CLIENT NAME], [CLIENT ADDRESS] (Receiving Party).
+
+1. DEFINITION OF CONFIDENTIAL INFORMATION
+Confidential Information means any data or information that is proprietary to the Disclosing Party and not generally known to the public, including but not limited to: technical data, trade secrets, source code, business plans, client lists, financial information, and product roadmaps.
+
+2. OBLIGATIONS OF RECEIVING PARTY
+The Receiving Party agrees to: hold the Confidential Information in strict confidence; not disclose the Confidential Information to any third party without prior written consent; use the Confidential Information solely for the purpose of evaluating a potential business relationship; protect the Confidential Information with the same degree of care used to protect its own confidential information, but no less than reasonable care.
+
+3. EXCLUSIONS
+This Agreement does not apply to information that: is or becomes publicly known through no breach of this Agreement; was rightfully known by the Receiving Party before disclosure; is independently developed by the Receiving Party without use of Confidential Information.
+
+4. TERM
+This Agreement shall remain in effect for 2 years from the date of signing.
+
+5. RETURN OF INFORMATION
+Upon request, the Receiving Party shall promptly return or destroy all Confidential Information.
+
+6. GOVERNING LAW
+This Agreement shall be governed by the laws of India. Any disputes shall be resolved in the courts of Hyderabad, Telangana.
+
+DISCLOSING PARTY: BJNEXUS AI
+Signature: _______________
+Date: _______________
+
+RECEIVING PARTY: [CLIENT NAME]
+Signature: _______________
+Date: _______________
