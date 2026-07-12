@@ -1,0 +1,19 @@
+{
+  "name": "enterprise-rag-system",
+  "image": "mcr.microsoft.com/devcontainers/python:3.12",
+
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+  },
+
+  "postStartCommand": "docker compose -f infrastructure/docker-compose.yml up -d",
+
+  "forwardPorts": [8000, 8501, 5433],
+  "portsAttributes": {
+    "8000": { "label": "FastAPI backend", "onAutoForward": "notify" },
+    "8501": { "label": "Streamlit UI", "onAutoForward": "openBrowser" },
+    "5433": { "label": "Postgres (pgvector)", "onAutoForward": "silent" }
+  },
+
+  "postCreateCommand": "python3 -m venv venv && venv/bin/pip install --no-cache-dir -r requirements.txt"
+}
