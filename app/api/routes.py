@@ -60,6 +60,20 @@ def health_check():
     return {"status": "healthy"}
 
 
+@router.get("/whoami")
+def whoami(key_data: dict = Depends(require_api_key)):
+    """Returns the identity (owner, role) tied to the presented API key.
+    Used by the UI at login so RBAC is driven by the actual authenticated
+    key rather than a client-supplied or self-selected user_id."""
+    owner = key_data.get("owner", "unknown")
+    role = key_data.get("role", "employee")
+    return {
+        "owner": owner,
+        "role": role,
+        "allowed_departments": get_allowed_departments(role)
+    }
+
+
 @router.post("/ingest", response_model=IngestResponse)
 async def ingest(
     file: UploadFile = File(...),
@@ -95,8 +109,13 @@ def query(
     key_data: dict = Depends(require_api_key)
 ):
     try:
-        # RBAC check
-        allowed, role = check_access(request.user_id, request.department)
+        # RBAC check — enforce against the AUTHENTICATED key's identity, not
+        # the client-supplied user_id. Using request.user_id directly let any
+        # valid API key claim an arbitrary role by simply setting user_id in
+        # the request body. We now use the key's registered owner (from
+        # key_data, set by require_api_key) for the access check.
+        effective_user_id = key_data.get("owner", request.user_id)
+        allowed, role = check_access(effective_user_id, request.department)
         if not allowed:
             allowed_depts = get_allowed_departments(role)
             return QueryResponse(
@@ -107,7 +126,7 @@ def query(
                 cost={"total_cost_usd": 0.0, "total_tokens": 0}
             )
 
-        tracker = CostTracker(session_id=f"{request.user_id}_{request.query[:20]}")
+        tracker = CostTracker(session_id=f"{effective_user_id}_{request.query[:20]}")
 
         chunks = retrieve(
             query=request.query,

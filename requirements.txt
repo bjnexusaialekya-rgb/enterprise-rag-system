@@ -1,3 +1,7 @@
+# CPU-only torch build — without this pip pulls the CUDA build by default,
+# adding ~2GB of unused nvidia-cuda-* packages and slowing every AWS build.
+--extra-index-url https://download.pytorch.org/whl/cpu
+
 annotated-doc==0.0.4
 annotated-types==0.7.0
 anyio==4.13.0
@@ -65,7 +69,7 @@ starlette==1.1.0
 sympy==1.14.0
 threadpoolctl==3.6.0
 tokenizers==0.22.2
-torch==2.12.0
+torch==2.12.0+cpu
 tqdm==4.68.1
 transformers==5.10.2
 typer==0.25.1
@@ -75,4 +79,4 @@ typing_extensions==4.15.0
 urllib3==2.7.0
 uvicorn==0.48.0
 rank-bm25==0.2.2
-streamlit
+streamlit==1.42.0

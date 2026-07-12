@@ -170,8 +170,20 @@ if not st.session_state.authenticated:
                         )
                         # Key is valid if we get 200 or 422 (validation error is fine)
                         if r.status_code in [200, 422]:
-                            # Decode role from key — we'll fetch it from list endpoint
+                            # Fetch the REAL identity tied to this key — do not
+                            # let the UI guess or let the user self-select a role.
+                            who = requests.get(
+                                f"{API_URL}/whoami",
+                                headers={"X-API-Key": key_input.strip()},
+                                timeout=5
+                            )
+                            who_data = who.json() if who.status_code == 200 else {}
                             st.session_state.api_key = key_input.strip()
+                            st.session_state.key_owner = who_data.get("owner", "unknown")
+                            st.session_state.key_role = who_data.get("role", "employee")
+                            st.session_state.allowed_departments = who_data.get(
+                                "allowed_departments", ["general"]
+                            )
                             st.session_state.authenticated = True
                             st.rerun()
                         else:
@@ -209,11 +221,11 @@ if not api_ok:
 with st.sidebar:
     st.markdown('<p class="sidebar-title">🔐 Session</p>', unsafe_allow_html=True)
 
-    # Department selector based on role
-    # Since we validate via key, show all departments for admin, restrict for others
-    # Default to general — user picks from what their key allows
-    all_depts = ["general", "hr", "finance", "legal"]
+    # Department selector — restricted to what this authenticated key
+    # is actually allowed to query (from /whoami), not a static full list.
+    all_depts = st.session_state.get("allowed_departments", ["general"])
     department = st.selectbox("Department", all_depts)
+    st.caption(f"Signed in as **{st.session_state.get('key_owner', 'unknown')}** ({st.session_state.get('key_role', 'employee')})")
 
     st.markdown("---")
     st.markdown('<p class="sidebar-title">📁 Ingest Document</p>', unsafe_allow_html=True)
@@ -288,7 +300,7 @@ if prompt := st.chat_input("Ask anything about your documents..."):
                     json={
                         "query": prompt,
                         "department": department,
-                        "user_id": "api_user",
+                        "user_id": st.session_state.get("key_owner", "anonymous"),
                         "top_k": 5
                     },
                     headers={"X-API-Key": st.session_state.api_key},

@@ -21,6 +21,24 @@ CREATE TABLE IF NOT EXISTS chunks (
 
 CREATE INDEX IF NOT EXISTS chunks_embedding_idx 
 ON chunks USING ivfflat (embedding vector_cosine_ops);
+
+-- Full-text search column + index for BM25 half of hybrid retrieval
+ALTER TABLE chunks ADD COLUMN IF NOT EXISTS content_tsv tsvector
+    GENERATED ALWAYS AS (to_tsvector('english', content)) STORED;
+
+CREATE INDEX IF NOT EXISTS chunks_content_tsv_idx
+ON chunks USING gin (content_tsv);
+
+-- API key authentication
+CREATE TABLE IF NOT EXISTS api_keys (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    key_hash TEXT UNIQUE NOT NULL,
+    owner TEXT NOT NULL,
+    role TEXT NOT NULL DEFAULT 'employee',
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT NOW(),
+    last_used_at TIMESTAMP
+);
 -- RBAC: users table
 CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
