@@ -4,23 +4,24 @@ import argparse
 import requests
 from pathlib import Path
 
-API_URL = "http://localhost:8000"
+API_URL = os.environ.get("API_URL", "http://localhost:8000")
 DOCUMENTS_DIR = "documents"
 SUPPORTED_EXTENSIONS = {".pdf", ".docx", ".xlsx", ".txt", ".csv", ".md"}
 
 
-def ingest_file(filepath: Path, department: str) -> dict:
+def ingest_file(filepath: Path, department: str, api_key: str) -> dict:
     with open(filepath, "rb") as f:
         response = requests.post(
             f"{API_URL}/ingest",
             files={"file": (filepath.name, f, "application/octet-stream")},
-            data={"department": department}
+            data={"department": department},
+            headers={"X-API-Key": api_key}
         )
     response.raise_for_status()
     return response.json()
 
 
-def bulk_ingest(folder: str = None):
+def bulk_ingest(folder: str = None, api_key: str = None):
     base = Path(DOCUMENTS_DIR)
 
     if folder:
@@ -43,7 +44,7 @@ def bulk_ingest(folder: str = None):
 
         for filepath in files:
             try:
-                result = ingest_file(filepath, dept)
+                result = ingest_file(filepath, dept, api_key)
                 print(f"  ✅ {filepath.name} — {result['chunks_created']} chunks")
                 total_files += 1
                 total_chunks += result["chunks_created"]
@@ -64,5 +65,10 @@ def bulk_ingest(folder: str = None):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Bulk ingest documents into Enterprise RAG")
     parser.add_argument("--folder", type=str, help="Ingest a single department folder (e.g. hr, finance)")
+    parser.add_argument("--api-key", type=str, default=os.environ.get("RAG_API_KEY"),
+                         help="API key (or set RAG_API_KEY env var)")
     args = parser.parse_args()
-    bulk_ingest(folder=args.folder)
+    if not args.api_key:
+        print("ERROR: pass --api-key <key> or set RAG_API_KEY env var.")
+        sys.exit(1)
+    bulk_ingest(folder=args.folder, api_key=args.api_key)

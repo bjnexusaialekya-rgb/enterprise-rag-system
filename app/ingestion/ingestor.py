@@ -124,13 +124,13 @@ def extract_content(file_path: str) -> str:
 
 # ── Main Ingestor ─────────────────────────────────────────────────────────────
 
-def ingest_file(file_path: str, department: str = "general") -> dict:
+def ingest_file(file_path: str, department: str = "general", original_filename: str = None) -> dict:
     path = Path(file_path)
 
     if not path.exists():
         raise FileNotFoundError(f"File not found: {file_path}")
 
-    filename = path.name
+    filename = original_filename or path.name
     logger.info(f"[ingestor] Starting ingestion: {filename} | department: {department}")
 
     content = extract_content(file_path)

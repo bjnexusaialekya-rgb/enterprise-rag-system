@@ -68,13 +68,14 @@ async def ingest(
     key_data: dict = Depends(require_api_key)
 ):
     try:
+        print(f"[DEBUG] file.filename = {file.filename!r}", flush=True)
         suffix = os.path.splitext(file.filename)[-1] or ".txt"
         with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
             content = await file.read()
             tmp.write(content)
             tmp_path = tmp.name
 
-        result = ingest_file(file_path=tmp_path, department=department)
+        result = ingest_file(file_path=tmp_path, department=department, original_filename=file.filename)
         os.unlink(tmp_path)
 
         return IngestResponse(
